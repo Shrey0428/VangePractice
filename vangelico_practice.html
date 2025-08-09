@@ -5,32 +5,73 @@
 <title>Vangelico Block Hack — Practice</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root { --cell:54px; --gap:6px; --bg:#0b0f14; --panel:#121821; --grid:#0d131b; --line:#1f2937; --text:#e8f1ff; --accent:#3ee4ff; }
-  *{box-sizing:border-box;font-family:system-ui,Segoe UI,Roboto,Arial}
-  body{margin:0;background:radial-gradient(1200px 600px at 10% -10%, #0f2030 0%, #0b0f14 60%, #0a0d12 100%); color:var(--text); display:flex; min-height:100vh; align-items:center; justify-content:center; padding:18px}
-  .wrap{width:100%; max-width:860px}
-  .panel{background:var(--panel); padding:14px; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.35)}
-  h1{margin:0 0 10px; font-size:18px}
-  .controls{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px}
-  button,label{background:#0e141c; color:var(--text); border:1px solid #223042; padding:9px 12px; border-radius:8px; cursor:pointer}
-  button:hover{border-color:var(--accent)}
-  .stats{display:flex; gap:16px; flex-wrap:wrap; font-size:14px; opacity:.95; margin-bottom:10px}
-  .grid{
-    width:100%;
-    display:grid;
-    grid-template-columns: repeat(11, var(--cell));
-    grid-auto-rows: var(--cell);
-    gap:var(--gap);
-    background:var(--grid);
-    border:1px solid var(--line);
-    border-radius:12px;
-    padding:var(--gap)
+  :root {
+    --gap: 6px;
+    --bg: #0b0f14;
+    --panel: #121821;
+    --grid: #0d131b;
+    --line: #1f2937;
+    --text: #e8f1ff;
+    --accent: #3ee4ff;
   }
-  .cell{border-radius:10px; box-shadow: inset 0 0 0 2px #ffffff14, 0 6px 16px rgba(0,0,0,.35); transition:transform .06s ease}
-  .cell:hover{transform:scale(1.03)}
-  .empty{background:transparent; border:1px dashed #22304233; box-shadow:none}
-  .timer.on{color:#9effa7} .timer.off{color:#ffb3b3}
-  .footer{opacity:.6; text-align:center; margin-top:10px; font-size:12px}
+  * { box-sizing: border-box; font-family: system-ui,Segoe UI,Roboto,Arial }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 10% -10%, #0f2030 0%, #0b0f14 60%, #0a0d12 100%);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+  }
+  .wrap { width: 100%; max-width: 860px }
+  .panel {
+    background: var(--panel);
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  h1 { margin: 0 0 10px; font-size: 18px }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 12px }
+  button, label {
+    background: #0e141c;
+    color: var(--text);
+    border: 1px solid #223042;
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent) }
+  .stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; opacity: .95; margin-bottom: 10px }
+  
+  /* Responsive grid */
+  .grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(11, 1fr);
+    gap: var(--gap);
+    background: var(--grid);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: var(--gap);
+  }
+  .cell {
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    box-shadow: inset 0 0 0 2px #ffffff14, 0 6px 16px rgba(0,0,0,.35);
+    transition: transform .06s ease;
+  }
+  .cell:hover { transform: scale(1.03) }
+  .empty {
+    background: transparent;
+    border: 1px dashed #22304233;
+    box-shadow: none;
+  }
+  .timer.on { color: #9effa7 }
+  .timer.off { color: #ffb3b3 }
+  .footer { opacity: .6; text-align: center; margin-top: 10px; font-size: 12px }
 </style>
 </head>
 <body>
@@ -56,7 +97,6 @@
 <script>
 (() => {
   const COLS = 11, ROWS = 8, COLORS = ["#ff5e5e", "#5eff8d", "#5eb9ff"];
-  const GAP = 6; // must match --gap
   const gridEl = document.getElementById('grid');
   const clearsEl = document.getElementById('clears');
   const largestEl = document.getElementById('largest');
@@ -68,25 +108,12 @@
   let board = [], clears = 0, largest = 0, undoStack = [];
   let timerOn = false, startTime = null, rafId = null;
 
-  // ---- Make tiles responsive to container width ----
-  function resizeCells(){
-    // gridEl width includes padding (gap on both sides)
-    const w = gridEl.clientWidth;
-    // available width for tiles = w - total gaps between tiles - side padding (already counted as gap)
-    const totalGaps = (COLS - 1) * GAP + 2 * GAP;
-    const cell = Math.floor((w - totalGaps) / COLS);
-    const clamped = Math.max(28, Math.min(cell, 54)); // keep reasonable range
-    document.documentElement.style.setProperty('--cell', clamped + 'px');
-  }
-  window.addEventListener('resize', resizeCells);
-
   function newBoard() {
     board = Array.from({length: ROWS}, () => Array.from({length: COLS}, () => (Math.random()*3|0)));
     undoStack.length = 0;
     clears = 0; largest = 0;
     render();
     updateStats();
-    resizeCells();
     if (timerOn) startTimer(true); else setTimerText(0);
   }
 
@@ -114,7 +141,6 @@
     if (group.length < 2) return;
 
     undoStack.push({ board: copyBoard(board), clears, largest });
-
     group.forEach(([rr,cc]) => board[rr][cc] = null);
     clears++;
     largest = Math.max(largest, group.length);
@@ -213,7 +239,6 @@
     updateStats();
   }
 
-  // ---- Timer ----
   function startTimer(reset=false){
     if (reset || startTime==null) startTime = performance.now();
     timerOn = true;
@@ -242,7 +267,6 @@
     timerEl.textContent = `${m}:${s}`;
   }
 
-  // ---- Wire UI ----
   document.getElementById('newBoard').addEventListener('click', newBoard);
   document.getElementById('undoBtn').addEventListener('click', undo);
   timerToggle.addEventListener('change', (e)=>{
@@ -250,7 +274,6 @@
   });
   resetTimerBtn.addEventListener('click', resetTimer);
 
-  // init
   newBoard();
 })();
 </script>
